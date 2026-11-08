@@ -39,6 +39,26 @@ jobs:
           cat android/gradle/wrapper/gradle-wrapper.properties
           grep -n "targetSdkVersion\|compileSdkVersion" android/variables.gradle
 
+      - name: Pre-download Gradle (mirrors)
+        run: |
+          P=android/gradle/wrapper/gradle-wrapper.properties
+          V=$(sed -n 's/.*gradle-\([0-9.]*\)-.*/\1/p' $P | head -1)
+          echo "Gradle $V"
+          mkdir -p $HOME/gz
+          for U in "https://downloads.gradle.org/distributions/gradle-$V-bin.zip" "https://mirrors.cloud.tencent.com/gradle/gradle-$V-bin.zip" "https://mirrors.aliyun.com/gradle/gradle-$V-bin.zip" "https://services.gradle.org/distributions/gradle-$V-bin.zip"; do
+            echo "Пробую $U"
+            for T in 1 2 3; do
+              if curl -fsSL --connect-timeout 20 --max-time 240 -o $HOME/gz/gradle.zip "$U" && unzip -tq $HOME/gz/gradle.zip >/dev/null 2>&1; then
+                sed -i "s|^distributionUrl=.*|distributionUrl=file://$HOME/gz/gradle.zip|" $P
+                echo "OK: $U"
+                cat $P
+                exit 0
+              fi
+              sleep 10
+            done
+          done
+          echo "Не удалось скачать Gradle ни с одного зеркала, пробую стандартный путь."
+
       - name: App icon
         run: |
           if [ -f icon-only.png ] && [ -f icon-foreground.png ] && [ -f icon-background.png ]; then
