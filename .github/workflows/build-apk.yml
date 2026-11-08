@@ -35,6 +35,8 @@ jobs:
       - name: Add Android
         run: |
           npx cap add android
+          sed -i 's/networkTimeout=.*/networkTimeout=180000/' android/gradle/wrapper/gradle-wrapper.properties
+          cat android/gradle/wrapper/gradle-wrapper.properties
           grep -n "targetSdkVersion\|compileSdkVersion" android/variables.gradle
 
       - name: App icon
@@ -94,14 +96,24 @@ jobs:
           KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease bundleRelease
+          for i in 1 2 3 4 5; do
+            ./gradlew assembleRelease bundleRelease && exit 0
+            echo "Попытка $i не удалась, жду и повторяю..."
+            sleep 45
+          done
+          exit 1
 
       - name: Build debug APK
         if: steps.sign.outputs.signed != 'true'
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug
+          for i in 1 2 3 4 5; do
+            ./gradlew assembleDebug && exit 0
+            echo "Попытка $i не удалась, жду и повторяю..."
+            sleep 45
+          done
+          exit 1
 
       - name: Upload AAB (for Google Play)
         if: steps.sign.outputs.signed == 'true'
