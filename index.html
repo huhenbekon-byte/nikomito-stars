@@ -1001,7 +1001,7 @@ async function topRows(){if(!FB.ok||!FB.uid)return null;if(TOPC.rows&&Date.now()
 function gR(){$('gBack').style.display=gForce?'none':'';$('gemsG').textContent=data.gems;
  $('gNote').textContent=gForce?'Выбери банду. Первый вход бесплатный, смена потом стоит '+GCOST+' 💎':data.gang?'Смена банды стоит '+GCOST+' 💎. Создавать свои банды нельзя.':'Выбери одну из трёх банд.';
  $('gCards').innerHTML=GANGLIST.map(g=>{const own=data.gang===g.id;return `<div class="gc ${own?'own':''}" data-g="${g.id}" style="--a:${g.c[0]};--b:${g.c[1]}">${shield(g)}<h2>${g.n}</h2><p>${g.d}</p><div class="gtr" id="gt_${g.id}">🏆 …</div><button class="gbt">${own?'✓ ТВОЯ БАНДА':!data.gang?'ВСТУПИТЬ':'СМЕНИТЬ · '+GCOST+' 💎'}</button></div>`}).join('');
- topRows().then(r=>{const t={nikomito:0,boys:0,girl:0};if(r)r.forEach(x=>{if(t[x.gang]!=null)t[x.gang]+=x.trophies|0});GANGLIST.forEach(g=>{const e=$('gt_'+g.id);if(e)e.textContent=r?'🏆 '+t[g.id]+' (топ-100)':'🏆 —'})}).catch(()=>{})}
+ window.__gangTotals().then(t=>{GANGLIST.forEach(g=>{const e=$('gt_'+g.id);if(e)e.textContent=t?'🏆 '+Math.max(0,t[g.id]|0)+(data.gang===g.id&&(data.gv|0)>0?' · твой вклад +'+(data.gv|0):''):'🏆 —'})}).catch(()=>{})}
 function gDone(id){gForce=false;sfx('win');burst();popup('ТЫ В БАНДЕ '+GANGS[id].n+'!','Теперь в бою рядом с твоим ником будет метка <b style="color:'+GC2[id]+'">['+GANGS[id].tag+']</b>.');if(dgAvail())setTimeout(()=>{dgR();screen('daily')},50);else screen('main')}
 $('gCards').onclick=e=>{const c=e.target.closest('.gc');if(!c)return;const id=c.dataset.g;if(data.gang===id){sfx('click');return}
  if(!data.gang){data.gang=id;save();gDone(id);return}
@@ -1013,7 +1013,7 @@ const _td=window.tutDone;window.tutDone=function(){_td();setTimeout(needGang,130
 const _al2=afterLogin;afterLogin=function(){_al2();setTimeout(needGang,300)};setTimeout(needGang,700);
 showTop=async function(tab){tab=tab||'all';if(!FB.ok||!FB.uid)return popup('РЕЙТИНГ','Рейтинг доступен после входа в облачный аккаунт и при наличии интернета.');
  let rows;try{if(!TOPC.rows||Date.now()-TOPC.t>30000)popup('РЕЙТИНГ','Загрузка…');rows=await topRows()}catch(e){return popup('РЕЙТИНГ','Не удалось загрузить рейтинг: '+fmsg(e))}
- const tot={nikomito:0,boys:0,girl:0};rows.forEach(r=>{if(tot[r.gang]!=null)tot[r.gang]+=r.trophies|0});
+ let tot={nikomito:0,boys:0,girl:0};try{const gt=await window.__gangTotals();if(gt)tot={nikomito:Math.max(0,gt.nikomito|0),boys:Math.max(0,gt.boys|0),girl:Math.max(0,gt.girl|0)}}catch(e){}
  const list=rows.filter(r=>tab==='all'||r.gang===tab).slice(0,20);let i=0;
  const tabs=['all',...GANGLIST.map(g=>g.id)].map(k=>`<button class="tbt${k===tab?' on':''}" onclick="showTop('${k}')">${k==='all'?'ВСЕ':GANGS[k].n}</button>`).join('');
  popup('РЕЙТИНГ',`<div class="tabs2">${tabs}</div><div class="gtot">${GANGLIST.map(g=>`<span style="color:${GC2[g.id]}">${g.tag} ${tot[g.id]}🏆</span>`).join(' · ')}</div><div class="lbl">${list.map(r=>{i++;const g=GANGS[r.gang];return `<div class="lbr${r.id===FB.uid?' me':''}"><b>${i}</b><span>${g?`<em style="color:${GC2[r.gang]};font-style:normal">[${g.tag}]</em> `:''}${esc(r.nick)}</span><i>🏆 ${r.trophies|0}</i></div>`}).join('')||'Пока никого нет'}</div>`)};
@@ -1254,8 +1254,24 @@ window.__tr=function(g,pl){
  if(g.tm){v=pl===1?8:pl===2?2:-Math.round(5*L)}
  else{v=[10,6,4,2,-2,-3,-4,-5][(pl|0)-1];if(v==null)v=0;if(v<0)v=-Math.round(-v*L)}
  v=Math.max(v,-t);if(v===0)v=0;
- if(!g.prac){if(v>0){data.ws=(data.ws|0)+1;data.ls=0}else if(v<0){data.ls=(data.ls|0)+1;data.ws=0}}
+ if(!g.prac){if(v>0){data.ws=(data.ws|0)+1;data.ls=0}else if(v<0){data.ls=(data.ls|0)+1;data.ws=0}if(v!==0&&window.__gangAdd)window.__gangAdd(v)}
  return v};
+})();
+</script>
+<script>
+(function(){
+let cache={t:0,v:null};
+window.__gangAdd=function(v){try{
+ if(!FB||!FB.ok||!FB.uid||!data.gang||!v)return;
+ data.gv=(data.gv|0)+v;
+ FB.db.collection('gangs').doc(data.gang).set({t:firebase.firestore.FieldValue.increment(v)},{merge:true}).then(()=>{cache.t=0}).catch(()=>{});
+}catch(e){}};
+window.__gangTotals=async function(){
+ if(!FB||!FB.ok||!FB.uid)return null;
+ if(cache.v&&Date.now()-cache.t<30000)return cache.v;
+ const q=await FB.db.collection('gangs').get(),o={nikomito:0,boys:0,girl:0};
+ q.docs.forEach(d=>{if(o[d.id]!=null)o[d.id]=d.data().t|0});
+ cache={t:Date.now(),v:o};return o};
 })();
 </script>
 </body></html>
