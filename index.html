@@ -995,7 +995,110 @@ render();
 <script>
 (function(){const b=document.getElementById('mapPick');
 function cur(){const m=data.mode||'sd',l=window.MAPN[m],i=data.maps&&data.maps[m];return{m,l,i:(i!=null&&l[i])?i:-1}}
-function upd(){const ad=document.getElementById('admin');if(ad)ad.style.display=(data.nick==='NIKOMITO-DEV')?'block':'none';const ms=document.getElementById('mainScreen');if(!ms||!ms.classList.contains('active')){b.style.display='none';return}const c=cur();b.style.display='block';b.textContent='🗺 КАРТА: '+(c.i<0?'СЛУЧАЙНАЯ':c.l[c.i].n.toUpperCase())}
+function upd(){const ad=document.getElementById('admin');if(ad)ad.style.display=(window.isAdm&&window.isAdm())?'block':'none';const ms=document.getElementById('mainScreen');if(!ms||!ms.classList.contains('active')){b.style.display='none';return}const c=cur();b.style.display='block';b.textContent='🗺 КАРТА: '+(c.i<0?'СЛУЧАЙНАЯ':c.l[c.i].n.toUpperCase())}
 b.onclick=()=>{const c=cur();let n=c.i+1;if(n>=c.l.length)n=-1;data.maps=data.maps||{};if(n<0)delete data.maps[c.m];else data.maps[c.m]=n;try{save()}catch(e){}try{sfx('coin')}catch(e){}upd()};
 setInterval(upd,400);upd();})();
-</script></body></html>
+</script>
+<style>
+#admP{position:fixed;inset:0;z-index:9000;background:#b00a0a;display:none;align-items:center;justify-content:center;font-family:Impact,'Arial Black',Arial,sans-serif;color:#fff}
+#admP.on{display:flex}
+#admP .w{width:min(96vw,150vh);max-height:98vh;overflow:auto;padding:1.2vh 1.5vw}
+#admP .hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5vh}
+#admP .ti{flex:1;margin:0 1vw;background:linear-gradient(#ff3b3b,#c40d0d);border:.4vh solid #6a0000;border-radius:1.2vh;padding:1.2vh 2vw;font-size:min(5vh,3.4vw);text-shadow:0 .3vh 0 #000;-webkit-text-stroke:.2vh #000;paint-order:stroke fill;transform:skewX(-6deg)}
+#admP .x{width:7vh;height:7vh;border-radius:1.2vh;border:.4vh solid #5b0000;background:#e32222;font-size:4vh;color:#fff;cursor:pointer;font-family:inherit}
+#admP .atabs{display:flex;gap:1vw;margin-bottom:1.5vh}
+#admP .tab{flex:1;padding:1.4vh .5vw;border-radius:1.2vh;border:.3vh solid #2a0a12;background:#3b1020;color:#fff;font-size:min(2.8vh,2vw);cursor:pointer;font-family:inherit;opacity:.85}
+#admP .tab.on{background:linear-gradient(#ffd54a,#f5a300);color:#fff;border-color:#a56a00;opacity:1;text-shadow:0 .2vh 0 #000}
+#admP .pn{background:rgba(40,6,14,.88);border:.4vh solid #2a0008;border-radius:2vh;padding:2vh 2vw}
+#admP .rw{display:flex;gap:2vw;flex-wrap:wrap}
+#admP .afl{flex:1;min-width:30%}
+#admP .lb{font-size:min(3.2vh,2.4vw);margin-bottom:.8vh}
+#admP input{width:100%;box-sizing:border-box;background:#1a0408;border:.3vh solid #5b0a14;border-radius:1.2vh;color:#fff;font-size:min(4vh,3vw);padding:1.2vh 1vw;text-align:center;font-family:inherit}
+#admP .num{display:flex;gap:.6vw;align-items:stretch}
+#admP .st{display:flex;flex-direction:column;gap:.4vh}
+#admP .st button{flex:1;width:6vh;border-radius:1vh;border:.3vh solid #000;background:#33121c;color:#fff;font-size:2.4vh;cursor:pointer}
+#admP .row2{display:flex;gap:2vw;margin-top:2vh;align-items:center;flex-wrap:wrap}
+#admP .give{flex:1.1;min-width:40%;padding:2vh;border:.4vh solid #1a6b00;border-radius:1.6vh;background:linear-gradient(#3dff2a,#17b800);color:#fff;font-size:min(6vh,4vw);cursor:pointer;font-family:inherit;-webkit-text-stroke:.25vh #000;paint-order:stroke fill;text-shadow:0 .3vh 0 #000}
+#admP .give:disabled{opacity:.5}
+#admP .warn{flex:1;min-width:40%;background:rgba(50,6,10,.9);border-radius:1.6vh;padding:1.6vh 1.4vw;font-family:Arial,sans-serif;font-weight:700;font-size:min(2.6vh,1.9vw)}
+#admP .msg{margin-top:1.4vh;min-height:3vh;font-family:Arial,sans-serif;font-weight:700;font-size:min(2.8vh,2vw);text-align:center}
+#admP .soon{padding:6vh 2vw;text-align:center;font-size:min(4vh,3vw)}
+</style>
+<div id="admP"><div class="w">
+ <div class="hd"><div style="font-size:7vh">👑</div><div class="ti">АДМИН ПАНЕЛЬ</div><button class="x" id="admX">✕</button></div>
+ <div class="atabs"><button class="tab on" data-t="0">👤 Выдать игроку</button><button class="tab" data-t="1">📊 Настройки</button><button class="tab" data-t="2">⚙ Команды</button><button class="tab" data-t="3">🔧 Прочее</button></div>
+ <div class="pn">
+  <div id="admT0">
+   <div class="rw">
+    <div class="afl"><div class="lb">👤 Игрок:</div><input id="admNick" maxlength="12" placeholder="Введите ник..." autocomplete="off"></div>
+    <div class="afl"><div class="lb">💎 Кристаллы:</div><div class="num"><input id="admGem" type="number" value="0"><div class="st"><button data-d="gem" data-v="100">▲</button><button data-d="gem" data-v="-100">▼</button></div></div></div>
+    <div class="afl"><div class="lb">🏆 Кубки:</div><div class="num"><input id="admTr" type="number" value="0"><div class="st"><button data-d="tr" data-v="10">▲</button><button data-d="tr" data-v="-10">▼</button></div></div></div>
+   </div>
+   <div class="row2"><button class="give" id="admGive">✔ Выдать</button><div class="warn">❗ Будьте внимательны! Все действия записываются в логах.</div></div>
+   <div class="msg" id="admMsg"></div>
+  </div>
+  <div id="admT1" class="soon" style="display:none">Скоро</div>
+  <div id="admT2" class="soon" style="display:none">Скоро</div>
+  <div id="admT3" class="soon" style="display:none">Скоро</div>
+ </div>
+</div></div>
+<script>
+(function(){
+const ADMIN_UID='__ADMIN_UID__';
+window.isAdm=function(){try{return !!(ADMIN_UID&&ADMIN_UID.length>10&&FB&&FB.uid===ADMIN_UID)}catch(e){return false}};
+const g=id=>document.getElementById(id);
+const clampN=(v,m)=>Math.max(-m,Math.min(m,parseInt(v,10)||0));
+function msg(t,ok){const m=g('admMsg');m.textContent=t;m.style.color=ok?'#7dff6a':'#ffb0b0'}
+function openP(){if(!isAdm())return;g('admP').classList.add('on')}
+const ab=g('admin');if(ab)ab.onclick=openP;
+g('admX').onclick=()=>g('admP').classList.remove('on');
+document.querySelectorAll('#admP .tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('#admP .tab').forEach(x=>x.classList.toggle('on',x===b));for(let i=0;i<4;i++)g('admT'+i).style.display=(+b.dataset.t===i)?'block':'none'});
+document.querySelectorAll('#admP .st button').forEach(b=>b.onclick=()=>{const el=g(b.dataset.d==='gem'?'admGem':'admTr');el.value=(parseInt(el.value,10)||0)+(+b.dataset.v)});
+async function findUid(nick){
+ const col=FB.db.collection('board');
+ let q=await col.where('nick','==',nick).limit(5).get();
+ if(q.size===1)return q.docs[0].id;
+ if(q.size>1)throw new Error('Найдено несколько игроков с таким ником.');
+ const low=nick.toLowerCase();
+ q=await col.orderBy('trophies','desc').limit(500).get();
+ const m=q.docs.filter(d=>String(d.data().nick||'').toLowerCase()===low);
+ if(m.length===1)return m[0].id;
+ if(m.length>1)throw new Error('Найдено несколько игроков с таким ником.');
+ return null}
+g('admGive').onclick=async()=>{
+ if(!isAdm())return;
+ const nick=g('admNick').value.trim(),gems=clampN(g('admGem').value,100000),tr=clampN(g('admTr').value,10000);
+ if(!nick)return msg('Введите ник игрока.');
+ if(!gems&&!tr)return msg('Укажите кристаллы или кубки.');
+ const btn=g('admGive');btn.disabled=true;msg('Ищу игрока…',true);
+ try{
+  const uid=await findUid(nick);
+  if(!uid){msg('Игрок «'+nick+'» не найден.');return}
+  const t=firebase.firestore.FieldValue.serverTimestamp(),b=FB.db.batch();
+  const rec={to:uid,nick:nick,gems:gems,trophies:tr,by:FB.uid,t:t};
+  b.set(FB.db.collection('gifts').doc(),rec);
+  b.set(FB.db.collection('adminlog').doc(),rec);
+  await b.commit();
+  msg('Готово: '+nick+' получит '+(gems?gems+' 💎 ':'')+(tr?tr+' 🏆 ':'')+'при входе в игру.',true);
+  g('admGem').value=0;g('admTr').value=0;
+ }catch(e){msg(e.code==='permission-denied'?'Нет доступа: проверь правила Firebase.':(e.message||'Ошибка'))}
+ finally{btn.disabled=false}};
+// получение подарков игроком
+async function claimGifts(){
+ if(!FB||!FB.ok||!FB.uid)return;
+ const q=await FB.db.collection('gifts').where('to','==',FB.uid).limit(20).get();
+ if(q.empty)return;
+ const b=FB.db.batch();let gm=0,tr=0;
+ q.docs.forEach(d=>{const x=d.data();gm+=(x.gems|0);tr+=(x.trophies|0);b.delete(d.ref)});
+ await b.commit();
+ data.gems=Math.max(0,(data.gems|0)+gm);data.trophies=Math.max(0,(data.trophies|0)+tr);
+ try{save()}catch(e){}try{render()}catch(e){}
+ popup('ПОДАРОК ОТ АДМИНА','Тебе выдали: '+(gm?'<b>'+gm+' 💎</b> ':'')+(tr?'<b>'+tr+' 🏆</b>':''))}
+const _ec=enterCloud;
+enterCloud=async function(u){await _ec(u);try{await claimGifts()}catch(e){}};
+// показать ID аккаунта в профиле (нужно один раз, чтобы привязать админа)
+const _pp=popup;
+popup=function(t,b,bt){if(t==='ПРОФИЛЬ'&&FB&&FB.uid)b+='<p style="font-size:11px;opacity:.7;word-break:break-all">ID: '+FB.uid+'</p>';return _pp(t,b,bt)};
+})();
+</script>
+</body></html>
