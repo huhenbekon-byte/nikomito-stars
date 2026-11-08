@@ -2079,7 +2079,8 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)stopAll()})
 .rc.ok{animation:rok 1s ease-in-out infinite,uxbn 1.2s ease-in-out infinite}@keyframes uxbn{50%{transform:translateY(-1cqw)}}
 </style><script id="uxjs">
 (function(){
-const PH={'Фина':['Я готова!',330,'sawtooth'],'Рон':['Йо-хо! Поехали!',210,'square'],'Свинь':['Бабах! Держись!',140,'sawtooth'],'Курт':['Огонь по готовности!',170,'square'],'Кубик Рубик':['Крути-верти!',260,'triangle'],'Луфи':['Я стану королём!',240,'sawtooth'],'Шник':['Ха! Лёгкая добыча!',190,'square'],'Фет':['Зададим жару!',120,'sawtooth']};
+const PH={'Фина':['Привет! Я Фина, я готова!',330,'sawtooth',1.6,1.05],'Рон':['Привет! Йо-хо, поехали!',210,'square',1.15,1.15],'Свинь':['Привет! Бабах, держись!',140,'sawtooth',.5,.9],'Курт':['Привет! Огонь по готовности!',170,'square',.75,.95],'Кубик Рубик':['Привет! Крути-верти!',260,'triangle',1.4,1.2],'Луфи':['Привет! Я стану королём!',240,'sawtooth',1.25,1.1],'Шник':['Привет! Лёгкая добыча!',190,'square',.65,1],'Фет':['Привет! Зададим жару!',120,'sawtooth',.85,.9]};
+function speak(t,pi,ra){try{const ss=window.speechSynthesis;if(!ss||!window.SpeechSynthesisUtterance)return false;const vs=ss.getVoices(),v=vs.find(x=>/^ru/i.test(x.lang));if(vs.length&&!v)return false;ss.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='ru-RU';if(v)u.voice=v;u.pitch=pi;u.rate=ra;u.volume=data.vol==null?1:data.vol;ss.speak(u);return true}catch(e){return false}}
 const VW=[[800,1200],[400,2000],[300,2300],[500,1000],[700,1700],[350,800]];
 let vt=0;
 function babble(text,f0,wave){const a=au();if(!a||data.mute||data.vol===0)return;const syl=[];text.replace(/[^а-яёa-z ]/gi,'').toLowerCase().split(' ').forEach(w=>{const n=Math.max(1,(w.match(/[аеёиоуыэюя]/g)||[]).length);for(let i=0;i<n;i++)syl.push(i===n-1&&n>0)});
@@ -2090,7 +2091,7 @@ function babble(text,f0,wave){const a=au();if(!a||data.mute||data.vol===0)return
   g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+d);
   o.connect(f1);o.connect(f2);f1.connect(g);f2.connect(g);g.connect(a.destination);o.start(t);o.stop(t+d+.02);t+=d+.035+(last?.07:0)})}
 window.__voice=function(name){try{const p=PH[name]||['Вперёд!',200,'square'];const now=Date.now();if(now-vt<700)return;vt=now;
- babble(p[0],p[1],p[2]);const app=document.getElementById('app');const old=document.getElementById('vbub');if(old)old.remove();
+ if(data.mute||data.vol===0){}else if(!speak(p[0],p[3]||1,p[4]||1))babble(p[0].replace(/^Привет! /,''),p[1],p[2]);const app=document.getElementById('app');const old=document.getElementById('vbub');if(old)old.remove();
  const b=document.createElement('div');b.id='vbub';b.innerHTML='<small>'+name.toUpperCase()+'</small>'+p[0];app.appendChild(b);setTimeout(()=>b.classList.add('out'),1700);setTimeout(()=>b.remove(),2100)}catch(e){}};
 const app=document.getElementById('app');
 // rising stars on menu
