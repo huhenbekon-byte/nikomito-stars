@@ -1,4 +1,4 @@
-name: Build APK
+name: Build APK and AAB
 
 on:
   push:
@@ -8,41 +8,122 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Prepare project
         run: |
           mkdir -p www
-          if [ -f index.html ]; then cp index.html www/index.html; fi
-          test -f www/index.html || (echo "NO index.html IN REPO" && exit 1)
+          test -f index.html || (echo "NO index.html IN REPO" && exit 1)
+          cp index.html www/index.html
           echo '{"name":"nikomito-stars","version":"1.0.0","private":true}' > package.json
           echo '{"appId":"com.nikomito.stars","appName":"Nikomito Stars","webDir":"www"}' > capacitor.config.json
-          npm install @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
+          npm install @capacitor/core@8 @capacitor/cli@8 @capacitor/android@8
+          npm install -D @capacitor/assets
 
-      - name: Add Android and set landscape
+      - name: Add Android
         run: |
           npx cap add android
+          grep -n "targetSdkVersion\|compileSdkVersion" android/variables.gradle
+
+      - name: App icon
+        run: |
+          if [ -f icon-only.png ] && [ -f icon-foreground.png ] && [ -f icon-background.png ]; then
+            mkdir -p assets
+            cp icon-only.png icon-foreground.png icon-background.png assets/
+            npx capacitor-assets generate --android
+          else
+            echo "Иконки не найдены, остаётся стандартная."
+          fi
+
+      - name: Landscape, fullscreen, version
+        run: |
           sed -i 's/<activity /<activity android:screenOrientation="sensorLandscape" /' android/app/src/main/AndroidManifest.xml
+          sed -i '/<style name="AppTheme" parent/a\        <item name="android:windowFullscreen">true</item>' android/app/src/main/res/values/styles.xml
+          sed -i "s/versionCode [0-9]*/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -n "versionCode\|versionName" android/app/build.gradle
           npx cap sync android
 
+      - name: Set up signing
+        id: sign
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -f keystore.enc ] && [ -n "$KS_PASS" ]; then
+            openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 -in keystore.enc -out android/app/release.p12 -pass env:KS_PASS
+            {
+              echo ''
+              echo 'android {'
+              echo '    signingConfigs {'
+              echo '        release {'
+              echo "            storeFile file('release.p12')"
+              echo "            storeType 'pkcs12'"
+              echo "            storePassword System.getenv('KS_PASS')"
+              echo "            keyAlias 'nikomito'"
+              echo "            keyPassword System.getenv('KS_PASS')"
+              echo '        }'
+              echo '    }'
+              echo '    buildTypes {'
+              echo '        release {'
+              echo '            signingConfig signingConfigs.release'
+              echo '        }'
+              echo '    }'
+              echo '}'
+            } >> android/app/build.gradle
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Ключа нет: соберу только тестовый debug APK (для Google Play нужен ключ)."
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build signed APK + AAB
+        if: steps.sign.outputs.signed == 'true'
+        working-directory: android
+        env:
+          KS_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease bundleRelease
+
       - name: Build debug APK
+        if: steps.sign.outputs.signed != 'true'
         working-directory: android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
 
+      - name: Upload AAB (for Google Play)
+        if: steps.sign.outputs.signed == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: NikomitoStars-AAB-for-GooglePlay
+          path: android/app/build/outputs/bundle/release/app-release.aab
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: NikomitoStars-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
+
+      - name: Publish release (APK for friends)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Nikomito Stars v${{ github.run_number }}
+          files: |
+            android/app/build/outputs/apk/release/app-release.apk
+            android/app/build/outputs/apk/debug/app-debug.apk
