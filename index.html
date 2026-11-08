@@ -417,7 +417,7 @@ function updG(dt){const g=G,p=g.pl;g.t+=dt;g.sh*=.88;g.pf=Math.max(0,g.pf-dt);if
  const f=p.al?p:(g.bs.find(b=>b.al&&b.team===p.team)||g.bs.find(b=>b.al)||p);g.cam[0]+=(f.x-g.cam[0])*Math.min(1,dt*7);g.cam[1]+=(f.y-g.cam[1])*Math.min(1,dt*7);
  if(g.st==='end'&&!g.done){g.endT=(g.endT||0)+dt;if(g.endT>1.6){g.done=true;finishG()}}}
 function finishG(){const g=G,pl=g.place,tr=g.tm?[8,3,0,0,0,0,0,1][pl-1]:[10,6,4,2,0,0,0,0][pl-1],gm=g.tm?[5,2,0,0,0,0,0,1][pl-1]:[8,5,3,2,1,1,0,0][pl-1];
- sfx(pl===1?'win':'lose');gainTrophies(tr);data.gems+=gm;save();G=null;
+ sfx(pl===1?'win':'lose');if(!g.prac&&window.__stat)window.__stat(g,pl);gainTrophies(tr);data.gems+=gm;save();G=null;
  popup(pl===1?'ПОБЕДА!':'БОЙ ОКОНЧЕН',`<p style="font-size:1.4em">${g.tm?(pl===1?'🏆 ПОБЕДА!':pl===2?'НИЧЬЯ':'ПОРАЖЕНИЕ'):pl===1?'🏆 ПОБЕДА!':'Место: '+pl+' из 8'}</p><p>+${tr} 🏆　+${gm} 💎</p>`,[['В МЕНЮ',()=>{if(window.netEnd)netEnd();screen('main')}]])}
 function fx(x,y,n,col,sp,sz,l){if(G.pt.length>(data.low?110:320))return;for(let i=0;i<n;i++){const a=R(0,6.28),s=R(sp*.3,sp);G.pt.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:R(l*.5,l),m:l,c:col,s:R(sz*.5,sz)})}}
 function tx(x,y,t,col){G.tx.push({x,y,t,col,l:.8})}
@@ -547,7 +547,7 @@ function upd(dt){
 }
 function finish(){sfx(G.place===1?'win':'lose');if(G.tut){const q=G.place;G=null;window.tutDone(q);return}const g=G,pl=g.place,tr=g.tm?[8,3,0,0,0,0,0,1][pl-1]:[10,6,4,2,0,0,0,0][pl-1],gm=g.tm?[5,2,0,0,0,0,0,1][pl-1]:[8,5,3,2,1,1,0,0][pl-1];
  const body=`<p style="font-size:1.4em">${g.tm?(pl===1?'🏆 ПОБЕДА!':pl===2?'НИЧЬЯ':'ПОРАЖЕНИЕ'):pl===1?'🏆 ПОБЕДА!':'Место: '+pl+' из 8'}</p><p>Нокаутов: <b>${g.pl.kl||0}</b>　Кубов: <b>${g.pl.cu}</b></p>`+(g.prac?'<p>Тренировка: награды не начисляются.</p>':`<p>+${tr} 🏆　+${gm} 💎</p>`);
- if(!g.prac&&window.QS){QS.add('play',1);if(pl===1)QS.add('win',1)}if(!g.prac){gainTrophies(tr);data.gems+=gm;save()}G=null;
+ if(!g.prac&&window.__stat)window.__stat(g,pl);if(!g.prac&&window.QS){QS.add('play',1);if(pl===1)QS.add('win',1)}if(!g.prac){gainTrophies(tr);data.gems+=gm;save()}G=null;
  popup(pl===1?'ПОБЕДА!':'БОЙ ОКОНЧЕН',body,g.net?[['В МЕНЮ',()=>{if(window.netEnd)netEnd();screen('main')}]]:[['ЕЩЁ РАЗ',()=>{close();start(g.prac)}],['В МЕНЮ',()=>screen('main')]]);}
 function T(s,x,y,sz,col='#fff',al='center'){c.font=`900 ${sz}px "Arial Black",Arial`;c.textAlign=al;c.textBaseline='middle';c.lineWidth=sz/5;c.strokeStyle='#190f1c';c.lineJoin='round';c.strokeText(s,x,y);c.fillStyle=col;c.fillText(s,x,y)}
 function rr(x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
@@ -1099,6 +1099,106 @@ enterCloud=async function(u){await _ec(u);try{await claimGifts()}catch(e){}};
 // показать ID аккаунта в профиле (нужно один раз, чтобы привязать админа)
 const _pp=popup;
 popup=function(t,b,bt){if(t==='ПРОФИЛЬ'&&FB&&FB.uid)b+='<p style="font-size:11px;opacity:.7;word-break:break-all">ID: '+FB.uid+'</p>';return _pp(t,b,bt)};
+})();
+</script>
+<script>
+(function(){
+const MN={sd:'БОЙ НА ВЫЖИВАНИЕ',gg:'ОПУСТИ АЛМАЗЫ',hz:'ЗАХВАТ КЕЙСА',hk:'ХОККЕЙ'};
+const g$=id=>document.getElementById(id);
+// ---------- СТАТИСТИКА ----------
+window.__stat=function(g,pl){try{
+ const st=data.stats=data.stats||{g:0,w:0,k:0,m:{},f:{}};
+ const m=g.hk?'hk':g.hz?'hz':g.gg?'gg':'sd';
+ st.m=st.m||{};st.f=st.f||{};
+ const x=st.m[m]=st.m[m]||{g:0,w:0};
+ st.g=(st.g|0)+1;x.g=(x.g|0)+1;
+ const win=(pl===1);
+ if(win){st.w=(st.w|0)+1;x.w=(x.w|0)+1}
+ st.k=(st.k|0)+((g.pl&&g.pl.kl)|0);
+ const fn=data.selected||'Фина';st.f[fn]=(st.f[fn]|0)+1;
+}catch(e){}};
+function statsPopup(){
+ const st=data.stats||{g:0,w:0,k:0,m:{},f:{}};
+ const pct=st.g?Math.round(st.w/st.g*100):0;
+ let fav='—',mx=0;for(const k in (st.f||{})){if(st.f[k]>mx){mx=st.f[k];fav=k}}
+ const rows=Object.keys(MN).map(k=>{const x=(st.m||{})[k]||{g:0,w:0};return '<div style="display:flex;justify-content:space-between;gap:12px;font-size:.85em;margin:3px 0"><span>'+MN[k]+'</span><b>'+(x.w|0)+' / '+(x.g|0)+'</b></div>'}).join('');
+ popup('СТАТИСТИКА','<p style="font-size:1.1em">Боёв: <b>'+(st.g|0)+'</b>　Побед: <b>'+(st.w|0)+'</b> ('+pct+'%)</p><p>Нокаутов: <b>'+(st.k|0)+'</b></p><p>Любимый боец: <b>'+esc(fav)+'</b></p><p style="margin-top:8px;opacity:.8">Победы / бои по режимам</p>'+rows+'<p style="font-size:.7em;opacity:.6">Считаются только обычные бои, без тренировки.</p>',[['ЗАКРЫТЬ',close,'warn']]);
+}
+// ---------- ДРУЗЬЯ ----------
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function frToast(t){let e=g$('frToast');if(!e){e=document.createElement('div');e.id='frToast';e.style.cssText='position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:99998;background:#1d0a12;color:#fff;border:2px solid #ffd23a;border-radius:12px;padding:10px 18px;font:700 16px Arial,sans-serif;max-width:90vw;text-align:center;display:none';document.body.appendChild(e)}
+ e.textContent=t;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',3500)}
+function needCloud(){if(!FB||!FB.ok||!FB.uid){popup('НУЖЕН ОБЛАЧНЫЙ АККАУНТ','Друзья работают только с онлайн-аккаунтом: войди по нику и паролю при интернете.');return true}return false}
+async function loadFriends(){
+ data.friends=data.friends||[];
+ const ids=data.friends.map(f=>f.id),out={};
+ for(let i=0;i<ids.length;i+=10){
+  const q=await FB.db.collection('board').where(firebase.firestore.FieldPath.documentId(),'in',ids.slice(i,i+10)).get();
+  q.docs.forEach(d=>out[d.id]=d.data())}
+ return out}
+async function friendsPopup(){
+ if(needCloud())return;
+ data.friends=data.friends||[];
+ popup('ДРУЗЬЯ','Загрузка…',[['ЗАКРЫТЬ',close,'warn']]);
+ let info={};try{info=await loadFriends()}catch(e){}
+ const now=Date.now();
+ const list=data.friends.map((f,i)=>{const d=info[f.id]||{};if(d.nick&&d.nick!==f.nick)f.nick=d.nick;
+  const sn=d.seen&&d.seen.toMillis?d.seen.toMillis():0,on=sn&&(now-sn<150000);
+  return '<div style="display:flex;align-items:center;gap:8px;margin:6px 0;justify-content:space-between"><span style="text-align:left;flex:1">'+(on?'🟢':'⚪')+' <b>'+esc(f.nick)+'</b> <small>🏆'+(d.trophies|0)+'</small></span><button class="frb" onclick="__frInv('+i+')">ЗВАТЬ</button><button class="frb" style="background:#7a1020" onclick="__frDel('+i+')">✕</button></div>'}).join('')||'<p style="opacity:.8">Пока никого нет. Нажми «Добавить друга» и введи ник.</p>';
+ popup('ДРУЗЬЯ ('+data.friends.length+'/30)','<style>.frb{border:2px solid #000;border-radius:8px;background:#1a74d8;color:#fff;font:700 13px Arial,sans-serif;padding:6px 10px;cursor:pointer}</style>'+list+'<p style="font-size:.7em;opacity:.6">🟢 — в сети сейчас</p>',[['+ ДОБАВИТЬ ДРУГА',addFriendAsk],['ОБНОВИТЬ',friendsPopup],['ЗАКРЫТЬ',close,'warn']]);
+}
+function addFriendAsk(){popup('ДОБАВИТЬ ДРУГА','Введи ник игрока:<input id="frIn" maxlength="12" placeholder="Ник" autocomplete="off" style="text-align:center">',[['ДОБАВИТЬ',addFriendGo],['НАЗАД',friendsPopup]])}
+async function addFriendGo(){
+ const nick=(g$('frIn').value||'').trim();if(!nick)return;
+ if(needCloud())return;
+ data.friends=data.friends||[];
+ if(data.friends.length>=30)return popup('ДРУЗЬЯ','Список полный (30).',[['НАЗАД',friendsPopup]]);
+ popup('ДРУЗЬЯ','Ищу «'+esc(nick)+'»…');
+ try{
+  const col=FB.db.collection('board');let q=await col.where('nick','==',nick).limit(5).get(),doc=q.size===1?q.docs[0]:null;
+  if(q.size>1)return popup('ДРУЗЬЯ','Найдено несколько игроков с таким ником.',[['НАЗАД',friendsPopup]]);
+  if(!doc){const low=nick.toLowerCase();q=await col.orderBy('trophies','desc').limit(500).get();const m=q.docs.filter(d=>String(d.data().nick||'').toLowerCase()===low);if(m.length===1)doc=m[0]}
+  if(!doc)return popup('ДРУЗЬЯ','Игрок «'+esc(nick)+'» не найден.',[['НАЗАД',addFriendAsk]]);
+  if(doc.id===FB.uid)return popup('ДРУЗЬЯ','Это ты сам 🙂',[['НАЗАД',friendsPopup]]);
+  if(data.friends.some(f=>f.id===doc.id))return popup('ДРУЗЬЯ','Этот игрок уже в списке.',[['НАЗАД',friendsPopup]]);
+  data.friends.push({id:doc.id,nick:String(doc.data().nick||nick).slice(0,12)});save();friendsPopup();
+ }catch(e){popup('ДРУЗЬЯ','Не получилось: '+(e.code==='permission-denied'?'проверь правила Firebase.':(e.message||'ошибка сети')),[['НАЗАД',friendsPopup]])}
+}
+window.__frDel=function(i){const f=(data.friends||[])[i];if(!f)return;popup('УДАЛИТЬ ИЗ ДРУЗЕЙ?',esc(f.nick),[['УДАЛИТЬ',()=>{data.friends.splice(i,1);save();friendsPopup()}],['НАЗАД',friendsPopup]])};
+window.__frInv=async function(i){
+ const f=(data.friends||[])[i];if(!f||needCloud())return;
+ try{
+  if(!(NET.host&&NET.code&&NET.peer&&NET.peer.open)){
+   createRoom();
+   for(let k=0;k<40&&!(NET.host&&NET.code&&NET.peer&&NET.peer.open);k++)await sleep(250);
+   if(!(NET.peer&&NET.peer.open))return frToast('Не удалось создать комнату');
+  }
+  await FB.db.collection('invites').add({to:f.id,from:FB.uid,nick:String(data.nick||'Игрок').slice(0,12),code:NET.code,t:firebase.firestore.FieldValue.serverTimestamp()});
+  frToast('Приглашение отправлено: '+f.nick+'. Жди в комнате!');
+ }catch(e){frToast(e.code==='permission-denied'?'Нет доступа: обнови правила Firebase':'Не удалось отправить')}
+};
+// приём приглашений + «в сети»
+let unsub=null;
+function startSocial(){
+ if(!FB||!FB.ok||!FB.uid)return;
+ const beat=()=>{if(FB.uid&&!document.hidden)FB.db.collection('board').doc(FB.uid).update({seen:firebase.firestore.FieldValue.serverTimestamp()}).catch(()=>{})};
+ beat();if(!window.__beat)window.__beat=setInterval(beat,60000);
+ if(unsub){try{unsub()}catch(e){}unsub=null}
+ try{unsub=FB.db.collection('invites').where('to','==',FB.uid).onSnapshot(snap=>{snap.docChanges().forEach(ch=>{
+  if(ch.type!=='added')return;const d=ch.doc.data(),ts=d.t&&d.t.toMillis?d.t.toMillis():Date.now();
+  if(Math.abs(Date.now()-ts)>600000){ch.doc.ref.delete().catch(()=>{});return}
+  try{if(window.NETG.inGame()||(g$('lobby')&&g$('lobby').style.display==='flex'))return}catch(e){}
+  popup('ПРИГЛАШЕНИЕ',esc(d.nick||'Друг')+' зовёт тебя в онлайн-комнату!',[['ПРИСОЕДИНИТЬСЯ',()=>{ch.doc.ref.delete().catch(()=>{});joinRoom(d.code)}],['ОТКАЗАТЬСЯ',()=>{ch.doc.ref.delete().catch(()=>{});close()}]])})},()=>{})}catch(e){}
+}
+const _ec2=enterCloud;
+enterCloud=async function(u){await _ec2(u);try{startSocial()}catch(e){}};
+const _lo2=logout;
+logout=function(){if(unsub){try{unsub()}catch(e){}unsub=null}return _lo2.apply(this,arguments)};
+// кнопки в профиле
+const _p2=popup;
+popup=function(t,b,bt){
+ if(t==='ПРОФИЛЬ'&&Array.isArray(bt)){bt=bt.slice();const at=Math.min(2,bt.length);bt.splice(at,0,['ДРУЗЬЯ',friendsPopup],['СТАТИСТИКА',statsPopup])}
+ return _p2(t,b,bt)};
 })();
 </script>
 </body></html>
